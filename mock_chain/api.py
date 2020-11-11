@@ -8,6 +8,7 @@ import base64, cbor2, cose, json
 app = Flask(__name__)
 chain = {}
 
+
 @app.route('/dids', methods=["POST"])
 def create_did():
     """
@@ -23,13 +24,9 @@ def create_did():
     if request.content_type == "application/cose":
         ddo_cbor = cbor2.loads(request.data).value[2]
         ddo = DidDocument.from_dict(cbor2.loads(ddo_cbor))
+        auth_method = ddo.get_verification_method("authentication")
 
-        jk = jwk.JWK()
-        jk.import_key(**ddo.get_verification_method("authentication").public_key_jwk)
-        ver_key = Keys.jwk_to_cwk(jk)
-        ver_key.key_ops = KeyOps.VERIFY
-
-        valid, _ = SecureBoxCOSE.sign1_verify(request.data, ver_key)
+        valid, _ = SecureBoxCOSE.sign1_verify(request.data, auth_method.as_cwk())
         if valid:
             chain[ddo.id.encode()] = ddo
             resp = make_response(b"", 200)
@@ -40,12 +37,6 @@ def create_did():
             resp.headers["content-type"] = "application/cose"
             return resp
 
-    tx = request.get_json()
-    if not tx["did"] in chain:
-        chain[tx["did"]] = tx["document"]
-        return jsonify({"status": "ok"}), 200
-    else:
-        return jsonify({"status": "error: already exists"}), 400
 
 @app.route('/dids/<did>', methods=["GET"])
 def resolve_did(did=None):
@@ -59,9 +50,9 @@ def resolve_did(did=None):
             resp.headers["content-type"] = "application/cbor"
             return resp
         else:
-            return jsonify({"status": "ok", "document": chain[did]}), 200
+            return jsonify({"status": "ok", "document": chain[did].to_dict()}), 200
     else:
-        if request.accept == "application/cbor":
+        if request.accept_mimetypes == "application/cbor":
             resp = make_response(b"", 404)
             resp.headers["content-type"] = "application/cbor"
             return resp

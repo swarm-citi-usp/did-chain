@@ -4,6 +4,7 @@ from jwcrypto import jwk, jwe
 from swarm_sec import SecureBoxCOSE, Keys
 import pytest, cbor2
 
+
 @pytest.fixture
 def client():
     api.app.config["TESTING"] = True
@@ -17,10 +18,10 @@ def test_get(client):
 
 def test_post(client):
     ddo, keys = DidDocument.generate(with_server=True)
-    jk = jwk.JWK()
-    jk.import_key(**keys[1])
+    jk = jwk.JWK(**keys[1])
     sig_key = Keys.jwk_to_cwk(jk)
     payload = SecureBoxCOSE.sign1_sign(ddo.to_cbor(), sig_key)
+    print(payload)
 
     resp = client.post("/dids", data=payload, headers={"content-type": "application/cose"})
     assert resp.status_code == 200
