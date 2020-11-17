@@ -21,7 +21,8 @@ def create_did():
         }
     }' | http :7878/dids
     """
-    if request.content_type == "application/cose":
+    print(">>> post %s" % request.data)
+    if request.content_type == "application/cbor":
         ddo_cbor = cbor2.loads(request.data).value[2]
         ddo = DidDocument.from_dict(cbor2.loads(ddo_cbor))
         auth_method = ddo.get_verification_method("authentication")
@@ -30,11 +31,11 @@ def create_did():
         if valid:
             chain[ddo.id.encode()] = ddo
             resp = make_response(b"", 200)
-            resp.headers["content-type"] = "application/cose"
+            resp.headers["content-type"] = "application/cbor"
             return resp
         else:
             resp = make_response(b"", 400)
-            resp.headers["content-type"] = "application/cose"
+            resp.headers["content-type"] = "application/cbor"
             return resp
 
 
@@ -43,6 +44,7 @@ def resolve_did(did=None):
     """
     http :7878/dids/did:sw:WbXxdsyQsCEVnHHS7VzTcP
     """
+    print(">>> get %s" % did)
     if did in chain.keys():
         if "application/cbor" in request.accept_mimetypes:
             ddo = chain[did]

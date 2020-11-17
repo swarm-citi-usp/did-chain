@@ -23,7 +23,7 @@ def test_post(client):
     payload = SecureBoxCOSE.sign1_sign(ddo.to_cbor(), sig_key)
     print(payload)
 
-    resp = client.post("/dids", data=payload, headers={"content-type": "application/cose"})
+    resp = client.post("/dids", data=payload, headers={"content-type": "application/cbor"})
     assert resp.status_code == 200
     assert resp.data == b''
 
