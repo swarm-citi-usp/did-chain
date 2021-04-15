@@ -1,17 +1,39 @@
 from flask import Flask, request, make_response, jsonify
-from swarm_lib import DidDocument
+from swarm_lib import DidDocument, AgentV5, Storage
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
 from jwcrypto import jwk, jwe
 from cose.keys.cosekey import KeyOps
 import base64, cbor2, cose, json
 
-app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
+"""
+# Setup for the the `did_chain` agent
+```
+swarm_manager ~/.swarm_test --new_agent did_chain
+swarm_manager ~/.swarm_test --export_agent did_chain
+swarm_manager ~/.swarm_test --edit did_chain # change port to 7878, change type to swarm:didChain
+
+# (requires an existing `broker` agent)
+swarm_manager ~/.swarm_test --setup_trust did_chain broker
+```
+"""
+
+
+Storage.init(".swarm_test")
+did_chain = AgentV5.from_config("did_chain")
+did_chain.enable_flask_app(__name__)
+did_chain.flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 chain = {}
+chain[did_chain.id.encode()] = did_chain.did_document
 
 
-@app.route('/dids', methods=["POST"])
+@did_chain.flask_app.route('/dids', methods=["POST"])
 def create_did():
+    """Anchor a new DID Document.
+
+    Note that this route does not use DIoTComm, due to the fact that
+    in DIoTComm, the procedure is to look up the keys in the blockchain,
+    which is not possible here since this is the blockchain itself.
+    """
     print(">>> post %s %s %s" % (len(request.data), request.content_type, request.data))
     if request.content_type == "application/json":
         ddo_b64url = json.loads(request.data)["payload"]
@@ -48,10 +70,11 @@ def create_did():
             return resp
 
 
-@app.route('/dids/<did>', methods=["GET"])
+@did_chain.flask_app.route('/dids/<did>', methods=["GET"])
 def resolve_did(did=None):
-    """
-    http :7878/dids/did:sw:WbXxdsyQsCEVnHHS7VzTcP
+    """Resolve an existing DID Document.
+    
+    This route currently does not use DIoTComm. It might, in the future.
     """
     print(">>> get %s %s" % (did, request.accept_mimetypes))
     if did in chain.keys():
@@ -76,4 +99,5 @@ def resolve_did(did=None):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=7878)
+    did_chain.register_at_broker()
+    did_chain.serve_with_flask(debug=True)
