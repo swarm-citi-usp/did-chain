@@ -3,7 +3,7 @@ from swarm_lib import DidDocument, AgentV5, Storage
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
 from jwcrypto import jwk, jwe
 from cose.keys.cosekey import KeyOps
-import base64, cbor2, cose, json
+import base64, cbor2, cose, json, sys, os
 
 """
 # Setup for the the `did_chain` agent
@@ -17,8 +17,11 @@ swarm_manager ~/.swarm_test --setup_trust did_chain broker
 ```
 """
 
+if "SWARM_BASE_DIR" in os.environ:
+    Storage.init(os.environ["SWARM_BASE_DIR"], relative_to_home=False)
+else:
+    Storage.init(".swarm_test")
 
-Storage.init(".swarm_test")
 did_chain = AgentV5.from_config("did_chain")
 did_chain.enable_flask_app(__name__)
 did_chain.flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
