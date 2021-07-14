@@ -1,5 +1,5 @@
 from flask import Flask, request, make_response, jsonify
-from swarm_lib import DidDocument, AgentV5, Storage
+from swarm_lib import DidDocument, Agent, Storage
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
 from jwcrypto import jwk, jwe
 from cose.keys.cosekey import KeyOps
@@ -8,9 +8,7 @@ import base64, cbor2, cose, json, sys, os
 """
 # Setup for the the `did_chain` agent
 ```
-swarm_manager ~/.swarm_test --new_agent did_chain
-swarm_manager ~/.swarm_test --export_agent did_chain
-swarm_manager ~/.swarm_test --edit did_chain # change port to 7878, change type to swarm:didChain
+swarm_manager ~/.swarm_demo --new_agent did_chain swarm:didChain 7878
 
 # (requires an existing `broker` agent)
 swarm_manager ~/.swarm_test --setup_trust did_chain broker
@@ -22,7 +20,7 @@ if "SWARM_BASE_DIR" in os.environ:
 else:
     Storage.init(".swarm_test")
 
-did_chain = AgentV5.from_config("did_chain")
+did_chain = Agent.from_config("did_chain")
 did_chain.enable_flask_app(__name__)
 did_chain.flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 chain = {}
