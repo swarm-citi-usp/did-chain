@@ -1,5 +1,5 @@
 from flask import Flask, request, make_response, jsonify
-from swarm_lib import DidDocument, Agent, Storage
+from swarm_lib import DidDocument, Agent, Wallet
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
 from jwcrypto import jwk, jwe
 from cose.keys.cosekey import KeyOps
@@ -15,10 +15,7 @@ swarm_manager ~/.swarm_test --setup_trust did_chain broker
 ```
 """
 
-if "SWARM_BASE_DIR" in os.environ:
-    Storage.init(os.environ["SWARM_BASE_DIR"], relative_to_home=False)
-else:
-    Storage.init(".swarm_test")
+Wallet.init(os.environ["SWARM_BASE_DIR"])
 
 did_chain = Agent.from_config("did_chain")
 did_chain.enable_flask_app(__name__)
@@ -50,9 +47,10 @@ def create_did():
             return "", 400
     else:
         ddo_binary = cbor2.loads(request.data).value[2]
-        print("DDo binary: %s" % ddo_binary)
+        print("DDo binary: %s" % (ddo_binary))
         if request.content_type == "application/cbor":
             ddo = DidDocument.from_cbor(ddo_binary)
+            print("DDo from cbor: %s" % ddo.to_dict())
         elif request.content_type == "application/cbor-di":
             ddo = DidDocument.from_cbor_di(ddo_binary)
             print("DDo from cbor-di: %s" % ddo.to_dict())
@@ -101,4 +99,4 @@ def resolve_did(did=None):
 
 if __name__ == "__main__":
     did_chain.register_at_broker()
-    did_chain.serve_with_flask(debug=True)
+    did_chain.serve_with_flask(debug=False)
