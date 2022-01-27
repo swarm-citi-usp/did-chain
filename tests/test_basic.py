@@ -1,14 +1,24 @@
-from mock_chain import api
-from swarm_lib import DidDocument
+from swarm_lib import DidDocument, Wallet, Agent
 from jwcrypto import jwk, jwe
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
-import pytest, cbor2
+import pytest, cbor2, os, logging
+
+os.environ["SWARM_BASE_DIR"] = "~/.did_chain_unit_test"
+os.environ["CHAIN_COLLECTION"] = "unittestnet"
+
+logging.info("Generating new did chain for testing at ~/.swarm_test_did_chain ...")
+Wallet.init(os.environ["SWARM_BASE_DIR"])
+did_chain, keys = Agent.generate("did_chain", with_server=True, agent_type="swarm:didChain", port=7878)
+Wallet.writeAgent(did_chain, keys)
+Wallet.writeRemoteAgent(did_chain.to_remote())
+
+from mock_chain import api
 
 
 @pytest.fixture
 def client():
-    api.app.config["TESTING"] = True
-    with api.app.test_client() as client:
+    api.did_chain.flask_app.config["TESTING"] = True
+    with api.did_chain.flask_app.test_client() as client:
         yield client
 
 

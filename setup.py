@@ -16,8 +16,8 @@ def _read_requirements(file_name):
 INSTALL_REQUIREMENTS = _read_requirements('requirements.txt')
 
 setup(
-    name='mock_chain',
-    packages=find_packages(include=['mock_chain']),
+    name='did_chain',
+    packages=find_packages(include=['did_chain']),
     version='0.1.0',
     description='some description',
     author='jose da silva',

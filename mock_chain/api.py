@@ -1,3 +1,5 @@
+import logging
+from db import ChainDB
 from flask import Flask, request, make_response, jsonify
 from swarm_lib import DidDocument, Agent, Wallet
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
@@ -5,26 +7,18 @@ from jwcrypto import jwk, jwe
 from cose.keys.cosekey import KeyOps
 import base64, cbor2, cose, json, sys, os
 
-"""
-# Setup for the the `did_chain` agent
-```
-swarm_manager ~/.swarm_demo --new_agent did_chain swarm:didChain 7878
-
-# (requires an existing `broker` agent)
-swarm_manager ~/.swarm_test --setup_trust did_chain broker
-```
-"""
 
 Wallet.init(os.environ["SWARM_BASE_DIR"])
+did_chain_agent = Agent.from_config("did_chain")
+did_chain_agent.enable_flask_app(__name__)
+did_chain_agent.flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
-did_chain = Agent.from_config("did_chain")
-did_chain.enable_flask_app(__name__)
-did_chain.flask_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
-chain = {}
-chain[did_chain.id.encode()] = did_chain.did_document
+chain_db = ChainDB(os.environ.get("CHAIN_COLLECTION"))
+chain_db.add_self_ddo({"_id": did_chain_agent.id.encode(), **did_chain_agent.did_document.to_dict()})
+logging.debug(f"Added or updated chain with self ddo: {json.dumps(chain_db.read_chain(), indent=4)}")
 
 
-@did_chain.flask_app.route('/dids', methods=["POST"])
+@did_chain_agent.flask_app.route('/dids', methods=["POST"])
 def create_did():
     """Anchor a new DID Document.
 
@@ -41,7 +35,7 @@ def create_did():
         print(auth_method.as_jwk())
         valid, _ = SecureBoxJOSE.verify(request.data, auth_method.as_jwk())
         if valid:
-            chain[ddo.id.encode()] = ddo
+            chain_db.add_ddo({"_id": ddo.id.encode(), **ddo.to_dict()})
             return "", 200
         else:
             return "", 400
@@ -59,7 +53,7 @@ def create_did():
 
         valid, _ = SecureBoxCOSE.sign1_verify(request.data, auth_method.as_cwk())
         if valid:
-            chain[ddo.id.encode()] = ddo
+            chain_db.add_ddo({"_id": ddo.id.encode(), **ddo.to_dict()})
             resp = make_response(b"", 200)
             resp.headers["content-type"] = request.content_type
             return resp
@@ -69,15 +63,15 @@ def create_did():
             return resp
 
 
-@did_chain.flask_app.route('/dids/<did>', methods=["GET"])
+@did_chain_agent.flask_app.route('/dids/<did>', methods=["GET"])
 def resolve_did(did=None):
     """Resolve an existing DID Document.
     
     This route currently does not use DIoTComm. It might, in the future.
     """
     print(">>> get %s %s" % (did, request.accept_mimetypes))
-    if did in chain.keys():
-        ddo = chain[did]
+    ddo = chain_db.get_ddo(did)
+    if ddo:
         if "application/cbor-di" in request.accept_mimetypes:
             resp = make_response(ddo.to_cbor_di(), 200)
             resp.headers["content-type"] = "application/cbor-di"
@@ -89,7 +83,7 @@ def resolve_did(did=None):
         else:
             return jsonify({"status": "ok", "didDocument": ddo.to_dict()}), 200
     else:
-        if "application/cbor" in request.accept_mimetypes:
+        if "application/cbor" in request.accept_mimetypes or "application/cbor-di" in request.accept_mimetypes:
             resp = make_response(b"", 404)
             resp.headers["content-type"] = "application/cbor"
             return resp
@@ -98,5 +92,5 @@ def resolve_did(did=None):
 
 
 if __name__ == "__main__":
-    did_chain.register_at_broker()
-    did_chain.serve_with_flask(debug=False)
+    did_chain_agent.register_at_broker()
+    did_chain_agent.serve_with_flask(debug=False)
