@@ -8,7 +8,7 @@ def _read_requirements(file_name):
     requirements = []
     with open(os.path.join(file_name)) as f:
         for line in f:
-            if not line.startswith('#'):
+            if not line.startswith('#') and not line.startswith('git'):
                 requirements.append(line)
     return requirements
 
@@ -16,11 +16,11 @@ def _read_requirements(file_name):
 INSTALL_REQUIREMENTS = _read_requirements('requirements.txt')
 
 setup(
-    name='mock_chain',
-    packages=find_packages(include=['mock_chain']),
+    name='did_chain',
+    packages=find_packages(include=['did_chain']),
     version='0.1.0',
     description='some description',
-    author='jose da silva',
+    author='Geovane Fedrecheski',
     license='MIT',
     install_requires=INSTALL_REQUIREMENTS,
     setup_requires=['pytest-runner'],
