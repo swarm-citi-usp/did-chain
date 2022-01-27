@@ -1,5 +1,5 @@
 import logging
-from db import ChainDB
+from did_chain import ChainDB
 from flask import Flask, request, make_response, jsonify
 from swarm_lib import DidDocument, Agent, Wallet
 from swarm_sec import Keys, SecureBoxCOSE, SecureBoxJOSE
