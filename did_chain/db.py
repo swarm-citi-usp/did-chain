@@ -33,7 +33,8 @@ class ChainDB:
     def add_ddo(self, new_document):
         logging.info('Writing Data')
         try:
-            result = self.collection.insert_one(new_document)
+            result = self.collection.update_one({"_id": new_document["_id"]}, {"$set": new_document}, upsert=True)
+            logging.debug('Document added or updated')
             return True
         except Exception as e:
             logging.exception("Error adding did document")
