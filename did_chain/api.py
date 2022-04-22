@@ -69,26 +69,27 @@ def resolve_did(did=None):
     
     This route currently does not use DIoTComm. It might, in the future.
     """
-    print(">>> get %s %s" % (did, request.accept_mimetypes))
+    logging.info("<<< get %s %s" % (did, request.accept_mimetypes))
     ddo = chain_db.get_ddo(did)
+    logging.info("--- read from db ok")
+    response = None
     if ddo:
         if "application/cbor-di" in request.accept_mimetypes:
-            resp = make_response(ddo.to_cbor_di(), 200)
-            resp.headers["content-type"] = "application/cbor-di"
-            return resp
+            response = make_response(ddo.to_cbor_di(), 200)
+            response.headers["content-type"] = "application/cbor-di"
         elif "application/cbor" in request.accept_mimetypes:
-            resp = make_response(ddo.to_cbor(), 200)
-            resp.headers["content-type"] = "application/cbor"
-            return resp
+            response = make_response(ddo.to_cbor(), 200)
+            response.headers["content-type"] = "application/cbor"
         else:
-            return jsonify({"status": "ok", "didDocument": ddo.to_dict()}), 200
+            response = jsonify({"status": "ok", "didDocument": ddo.to_dict()}), 200
     else:
         if "application/cbor" in request.accept_mimetypes or "application/cbor-di" in request.accept_mimetypes:
-            resp = make_response(b"", 404)
-            resp.headers["content-type"] = "application/cbor"
-            return resp
+            response = make_response(b"", 404)
+            response.headers["content-type"] = "application/cbor"
         else:
-            return jsonify({"status": "%s not found" % did}), 404
+            response = jsonify({"status": "%s not found" % did}), 404
+    logging.info(">>> sending response")
+    return response
 
 
 if __name__ == "__main__":
