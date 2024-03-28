@@ -8,7 +8,7 @@
 
 from pymongo import MongoClient
 from swarm_lib import DidDocument
-import logging
+import logging, dotenv
 
 class ChainDB:
     def __init__(self, collection):
