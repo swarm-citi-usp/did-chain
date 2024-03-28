@@ -14,13 +14,12 @@ class ChainDB:
     def __init__(self, collection):
         mongo_config = dotenv.dotenv_values(".env")
         
-        self.client = MongoClient("localhost", 27017, serverSelectionTimeoutMS=3000)
+        self.client = MongoClient("localhost", 27017, serverSelectionTimeoutMS=3000, username=mongo_config["MONGO_USER"], password=mongo_config["MONGO_PWD"])
         database = "DidChain"
         collection = collection or "chain_testnet"
         logging.debug(f"Initializing ChainDB with {database} {collection}")
-        self.cursor = self.client[database]
-        self.cursor.authenticate(mongo_config["MONGO_USER"], mongo_config["MONGO_PWD"])
-        self.collection = self.cursor[collection]
+        cursor = self.client[database]
+        self.collection = cursor[collection]
 
     def read_chain(self):
         documents = self.collection.find()
